@@ -58,7 +58,7 @@ and make no changes until `--execute` is passed.
 
 ### `oxr init`
 
-Writes a `release.toml` scaffold to the repo root, with every setting
+Writes an `oxr.toml` scaffold to the repo root, with every setting
 commented out and set to its default value. A repo running the scaffold
 as-is behaves identically to having no config file at all — `init` never
 silently changes release behavior (for example, activating a
@@ -66,10 +66,10 @@ silently changes release behavior (for example, activating a
 would break the next release). Uncomment and edit only what you need to
 change.
 
-Always writes `release.toml`, the primary filename (see
+Always writes `oxr.toml`, the primary filename (see
 [Configuration](#configuration) for why it's spelled that way and how it
-relates to cargo-release) — not the `oxr.toml` fallback name. Refuses to
-overwrite an existing `release.toml` unless `--force` is passed. Unlike the
+relates to cargo-release) — not the `release.toml` compat name. Refuses to
+overwrite an existing `oxr.toml` unless `--force` is passed. Unlike the
 other subcommands, `init` works fine against a shallow checkout, since it
 doesn't need tag history.
 
@@ -151,15 +151,16 @@ jobs:
 
 ## Configuration
 
-Read from `release.toml` at the repo root by default, falling back to
-`oxr.toml`. Neither file existing is fine — oxr runs on defaults.
+Read from `oxr.toml` at the repo root by default, falling back to
+`release.toml` for anyone coming from cargo-release out of habit. Neither
+file existing is fine — oxr runs on defaults.
 
-**`release.toml` is [cargo-release](https://github.com/crate-ci/cargo-release)-inspired,
-not compatible with it.** oxr reuses the filename and several field names
-(`sign-commit`, `sign-tag`, `push`, `tag`, `tag-name`,
-`pre-release-commit-message`, `pre-release-replacements`) so the vocabulary
-is familiar to anyone coming from cargo-release, and those shared fields
-keep the same meaning. But the two schemas are not interchangeable:
+**oxr's config is [cargo-release](https://github.com/crate-ci/cargo-release)-inspired,
+not compatible with it.** It reuses several field names (`sign-commit`,
+`sign-tag`, `push`, `tag`, `tag-name`, `pre-release-commit-message`,
+`pre-release-replacements`) so the vocabulary is familiar to anyone coming
+from cargo-release, and those shared fields keep the same meaning. But the
+two schemas are not interchangeable:
 
 - oxr adds fields cargo-release has no equivalent for: `tag-pattern` (needed
   because oxr resolves the current version by scanning git tags, not a
@@ -172,9 +173,14 @@ keep the same meaning. But the two schemas are not interchangeable:
   the *only* source of truth. So even the identically-named, identically-behaving
   fields sit on top of a different version-resolution step.
 
-Dropping a Rust crate's `release.toml` into an oxr repo (or vice versa) will
-not produce equivalent behavior — write oxr's config specifically for oxr,
-using `oxr init` as the starting point.
+Because the schemas aren't interchangeable, oxr's default filename is
+`oxr.toml`, not `release.toml` — a bare `release.toml` reads as "this is a
+cargo-release config" to anyone who knows that tool, and the two would
+otherwise be easy to mix up on sight. `release.toml` is still supported as
+a fallback name (oxr picks up either one), but `oxr init` only ever writes
+`oxr.toml`. Dropping a Rust crate's `release.toml` into an oxr repo (or
+vice versa) will not produce equivalent behavior either way — write oxr's
+config specifically for oxr, using `oxr init` as the starting point.
 
 ```toml
 sign-commit = false

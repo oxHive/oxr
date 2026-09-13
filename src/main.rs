@@ -64,8 +64,8 @@ fn run() -> Result<()> {
 }
 
 fn run_init(repo_root: &Path, force: bool) -> Result<()> {
-    let target = repo_root.join("release.toml");
-    let legacy = repo_root.join("oxr.toml");
+    let target = repo_root.join("oxr.toml");
+    let legacy = repo_root.join("release.toml");
 
     if target.exists() && !force {
         bail!(
@@ -80,7 +80,7 @@ fn run_init(repo_root: &Path, force: bool) -> Result<()> {
     println!("wrote {}", target.display());
     if legacy.exists() {
         println!(
-            "note: '{}' also exists; release.toml now takes precedence over it",
+            "note: '{}' also exists; oxr.toml now takes precedence over it",
             legacy.display()
         );
     }

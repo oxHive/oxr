@@ -97,11 +97,16 @@ pub struct Replacement {
     pub exactly: usize,
 }
 
-/// Loads `release.toml` from the repo root, falling back to `oxr.toml`.
-/// Neither file existing is not an error: repos with no manifest-embedded
-/// version and no floating-tag needs can run oxr on defaults alone.
+/// Loads `oxr.toml` from the repo root, falling back to `release.toml` for
+/// anyone coming from cargo-release out of habit. `oxr.toml` is checked
+/// first (and is what `oxr init` writes) so the unambiguous name wins by
+/// default — the two schemas share vocabulary but aren't compatible, and a
+/// bare `release.toml` reads as "this is a cargo-release config" to anyone
+/// who knows that tool. Neither file existing is not an error: repos with
+/// no manifest-embedded version and no floating-tag needs can run oxr on
+/// defaults alone.
 pub fn load(repo_root: &Path) -> Result<Config> {
-    for name in ["release.toml", "oxr.toml"] {
+    for name in ["oxr.toml", "release.toml"] {
         let path = repo_root.join(name);
         if path.exists() {
             let text = std::fs::read_to_string(&path)
@@ -206,18 +211,18 @@ exactly = 1
     }
 
     #[test]
-    fn prefers_release_toml_over_oxr_toml() {
+    fn prefers_oxr_toml_over_release_toml() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("release.toml"), "push = false\n").unwrap();
-        std::fs::write(dir.path().join("oxr.toml"), "push = true\n").unwrap();
+        std::fs::write(dir.path().join("oxr.toml"), "push = false\n").unwrap();
+        std::fs::write(dir.path().join("release.toml"), "push = true\n").unwrap();
         let c = load(dir.path()).unwrap();
         assert!(!c.push);
     }
 
     #[test]
-    fn falls_back_to_oxr_toml() {
+    fn falls_back_to_release_toml() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("oxr.toml"), "push = false\n").unwrap();
+        std::fs::write(dir.path().join("release.toml"), "push = false\n").unwrap();
         let c = load(dir.path()).unwrap();
         assert!(!c.push);
     }
@@ -241,7 +246,7 @@ exactly = 1
     #[test]
     fn scaffold_written_by_init_round_trips_through_load() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("release.toml"), SCAFFOLD).unwrap();
+        std::fs::write(dir.path().join("oxr.toml"), SCAFFOLD).unwrap();
         let c = load(dir.path()).unwrap();
         assert_eq!(c.tag_name, "v{{version}}");
     }

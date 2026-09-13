@@ -15,9 +15,9 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Command {
-    /// Write a commented release.toml scaffold to the repo root.
+    /// Write a commented oxr.toml scaffold to the repo root.
     Init {
-        /// Overwrite an existing release.toml.
+        /// Overwrite an existing oxr.toml.
         #[arg(long)]
         force: bool,
     },
