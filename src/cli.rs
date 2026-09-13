@@ -15,6 +15,12 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Command {
+    /// Write a commented release.toml scaffold to the repo root.
+    Init {
+        /// Overwrite an existing release.toml.
+        #[arg(long)]
+        force: bool,
+    },
     /// Bump the version and create a release tag (dry run unless --execute).
     Release {
         level: Level,

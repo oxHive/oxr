@@ -47,6 +47,7 @@ cargo install --path .
 ## CLI
 
 ```
+oxr init [--force]
 oxr release <level> [--for <major|minor>] [--execute]
 oxr float --tag <tag> [--execute]
 oxr current [--json]
@@ -54,6 +55,20 @@ oxr current [--json]
 
 Both `release` and `float` are dry-run by default — they print their plan
 and make no changes until `--execute` is passed.
+
+### `oxr init`
+
+Writes a `release.toml` scaffold to the repo root, with every setting
+commented out and set to its default value. A repo running the scaffold
+as-is behaves identically to having no config file at all — `init` never
+silently changes release behavior (for example, activating a
+`pre-release-replacements` entry against a file that doesn't exist yet
+would break the next release). Uncomment and edit only what you need to
+change.
+
+Refuses to overwrite an existing `release.toml` unless `--force` is
+passed. Unlike the other subcommands, `init` works fine against a shallow
+checkout, since it doesn't need tag history.
 
 ### `oxr current`
 

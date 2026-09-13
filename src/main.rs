@@ -10,7 +10,7 @@ mod version;
 use std::env;
 use std::path::Path;
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use clap::Parser;
 
 use config::Config;
@@ -30,6 +30,15 @@ fn run() -> Result<()> {
     let cwd = env::current_dir()?;
     let repo_root = git::repo_root(&cwd)?;
 
+    // `init` only writes a scaffold file; it needs neither tag history nor
+    // an existing config, so it's exempt from the shallow-checkout gate.
+    match cli.command {
+        cli::Command::Init { force } => return run_init(&repo_root, force),
+        cli::Command::Current { .. }
+        | cli::Command::Release { .. }
+        | cli::Command::Float { .. } => {}
+    }
+
     if git::is_shallow(&repo_root)? {
         bail!(
             "'{}' is a shallow git checkout, so tag history is incomplete and version \
@@ -43,6 +52,7 @@ fn run() -> Result<()> {
     let config = config::load(&repo_root)?;
 
     match cli.command {
+        cli::Command::Init { .. } => unreachable!("handled above"),
         cli::Command::Current { json } => run_current(&repo_root, &config, json),
         cli::Command::Release {
             level,
@@ -51,6 +61,30 @@ fn run() -> Result<()> {
         } => run_release(&repo_root, &config, level, for_target, execute),
         cli::Command::Float { tag, execute } => run_float(&repo_root, &config, &tag, execute),
     }
+}
+
+fn run_init(repo_root: &Path, force: bool) -> Result<()> {
+    let target = repo_root.join("release.toml");
+    let legacy = repo_root.join("oxr.toml");
+
+    if target.exists() && !force {
+        bail!(
+            "'{}' already exists; pass --force to overwrite",
+            target.display()
+        );
+    }
+
+    std::fs::write(&target, config::SCAFFOLD)
+        .with_context(|| format!("writing {}", target.display()))?;
+
+    println!("wrote {}", target.display());
+    if legacy.exists() {
+        println!(
+            "note: '{}' also exists; release.toml now takes precedence over it",
+            legacy.display()
+        );
+    }
+    Ok(())
 }
 
 fn resolve(repo_root: &Path, config: &Config) -> Result<Resolution> {

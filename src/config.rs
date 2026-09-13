@@ -114,6 +114,41 @@ pub fn load(repo_root: &Path) -> Result<Config> {
     Ok(Config::default())
 }
 
+/// Scaffold written by `oxr init`. Fully commented on purpose: oxr behaves
+/// identically to having no config file at all until a setting is
+/// uncommented, so `init` can never silently change release behavior
+/// (e.g. activating a `pre-release-replacements` entry against a file that
+/// doesn't exist yet would break the next release).
+pub const SCAFFOLD: &str = r#"# oxr configuration.
+#
+# The current version is always read from git tags -- nothing in this file
+# is a version field. Uncomment and edit only the settings you want to
+# change from their defaults.
+
+# sign-commit = false
+# sign-tag = false
+# push = true
+# tag = true
+# tag-name = "v{{version}}"
+# tag-pattern = "^v\\d+\\.\\d+\\.\\d+"
+# pre-release-commit-message = "chore: release v{{version}}"
+
+# [float-tags]
+# major = true
+# minor = false
+# major-tag-name = "v{{major}}"
+# minor-tag-name = "v{{major}}.{{minor}}"
+
+# Keep an embedded version string in sync on every release, e.g. for a
+# manifest file such as .claude-plugin/plugin.json:
+#
+# [[pre-release-replacements]]
+# file = ".claude-plugin/plugin.json"
+# search = "\"version\": \"[^\"]+\""
+# replace = "\"version\": \"{{version}}\""
+# exactly = 1
+"#;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -185,5 +220,29 @@ exactly = 1
         std::fs::write(dir.path().join("oxr.toml"), "push = false\n").unwrap();
         let c = load(dir.path()).unwrap();
         assert!(!c.push);
+    }
+
+    #[test]
+    fn scaffold_parses_and_matches_defaults() {
+        let c: Config = toml::from_str(SCAFFOLD).unwrap();
+        let d = Config::default();
+        assert_eq!(c.sign_commit, d.sign_commit);
+        assert_eq!(c.sign_tag, d.sign_tag);
+        assert_eq!(c.push, d.push);
+        assert_eq!(c.tag, d.tag);
+        assert_eq!(c.tag_name, d.tag_name);
+        assert_eq!(c.tag_pattern, d.tag_pattern);
+        assert_eq!(c.pre_release_commit_message, d.pre_release_commit_message);
+        assert_eq!(c.float_tags.major, d.float_tags.major);
+        assert_eq!(c.float_tags.minor, d.float_tags.minor);
+        assert!(c.pre_release_replacements.is_empty());
+    }
+
+    #[test]
+    fn scaffold_written_by_init_round_trips_through_load() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("release.toml"), SCAFFOLD).unwrap();
+        let c = load(dir.path()).unwrap();
+        assert_eq!(c.tag_name, "v{{version}}");
     }
 }
