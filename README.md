@@ -66,9 +66,12 @@ silently changes release behavior (for example, activating a
 would break the next release). Uncomment and edit only what you need to
 change.
 
-Refuses to overwrite an existing `release.toml` unless `--force` is
-passed. Unlike the other subcommands, `init` works fine against a shallow
-checkout, since it doesn't need tag history.
+Always writes `release.toml`, the primary filename (see
+[Configuration](#configuration) for why it's spelled that way and how it
+relates to cargo-release) — not the `oxr.toml` fallback name. Refuses to
+overwrite an existing `release.toml` unless `--force` is passed. Unlike the
+other subcommands, `init` works fine against a shallow checkout, since it
+doesn't need tag history.
 
 ### `oxr current`
 
@@ -150,6 +153,28 @@ jobs:
 
 Read from `release.toml` at the repo root by default, falling back to
 `oxr.toml`. Neither file existing is fine — oxr runs on defaults.
+
+**`release.toml` is [cargo-release](https://github.com/crate-ci/cargo-release)-inspired,
+not compatible with it.** oxr reuses the filename and several field names
+(`sign-commit`, `sign-tag`, `push`, `tag`, `tag-name`,
+`pre-release-commit-message`, `pre-release-replacements`) so the vocabulary
+is familiar to anyone coming from cargo-release, and those shared fields
+keep the same meaning. But the two schemas are not interchangeable:
+
+- oxr adds fields cargo-release has no equivalent for: `tag-pattern` (needed
+  because oxr resolves the current version by scanning git tags, not a
+  manifest) and `[float-tags]` (the floating major/minor tag feature).
+- oxr deliberately drops cargo-release fields/concepts that don't apply
+  here: `tag-prefix` (the `v` lives inside `tag-name` instead), `publish`,
+  and the post-release "dev version" bump — see [Out of scope](#out-of-scope).
+- Most fundamentally, cargo-release's real source of truth is the `version`
+  field in `Cargo.toml`; oxr has no manifest to read at all — git tags are
+  the *only* source of truth. So even the identically-named, identically-behaving
+  fields sit on top of a different version-resolution step.
+
+Dropping a Rust crate's `release.toml` into an oxr repo (or vice versa) will
+not produce equivalent behavior — write oxr's config specifically for oxr,
+using `oxr init` as the starting point.
 
 ```toml
 sign-commit = false
