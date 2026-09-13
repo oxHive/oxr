@@ -117,3 +117,127 @@ pub fn stage_and_commit(
     run(repo_root, &commit_args)?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process::Command as StdCommand;
+
+    fn git(dir: &Path, args: &[&str]) {
+        let status = StdCommand::new("git")
+            .args(args)
+            .current_dir(dir)
+            .status()
+            .unwrap();
+        assert!(status.success(), "`git {}` failed", args.join(" "));
+    }
+
+    fn init_repo() -> tempfile::TempDir {
+        let dir = tempfile::tempdir().unwrap();
+        git(dir.path(), &["init", "-q"]);
+        git(dir.path(), &["config", "user.email", "t@example.com"]);
+        git(dir.path(), &["config", "user.name", "t"]);
+        git(dir.path(), &["commit", "-q", "--allow-empty", "-m", "init"]);
+        dir
+    }
+
+    #[test]
+    fn run_reports_stderr_on_failure() {
+        let dir = tempfile::tempdir().unwrap(); // not a git repo
+        let err = repo_root(dir.path()).unwrap_err();
+        assert!(err.to_string().contains("git rev-parse"));
+    }
+
+    #[test]
+    fn repo_root_resolves_toplevel() {
+        let dir = init_repo();
+        let root = repo_root(dir.path()).unwrap();
+        assert_eq!(
+            root.canonicalize().unwrap(),
+            dir.path().canonicalize().unwrap()
+        );
+    }
+
+    #[test]
+    fn is_shallow_false_for_a_normal_clone() {
+        let dir = init_repo();
+        assert!(!is_shallow(dir.path()).unwrap());
+    }
+
+    #[test]
+    fn is_shallow_true_for_a_shallow_clone() {
+        let src = init_repo();
+        git(src.path(), &["commit", "-q", "--allow-empty", "-m", "c2"]);
+
+        let dst = tempfile::tempdir().unwrap();
+        let src_url = format!("file://{}", src.path().display());
+        git(dst.path(), &["clone", "-q", "--depth", "1", &src_url, "."]);
+
+        assert!(is_shallow(dst.path()).unwrap());
+    }
+
+    #[test]
+    fn list_tags_and_tag_exists() {
+        let dir = init_repo();
+        assert!(list_tags(dir.path()).unwrap().is_empty());
+        assert!(!tag_exists(dir.path(), "v1.0.0").unwrap());
+
+        create_tag(dir.path(), "v1.0.0", "release v1.0.0", false).unwrap();
+
+        assert_eq!(list_tags(dir.path()).unwrap(), vec!["v1.0.0".to_string()]);
+        assert!(tag_exists(dir.path(), "v1.0.0").unwrap());
+    }
+
+    #[test]
+    fn commit_of_resolves_tag_to_head_sha() {
+        let dir = init_repo();
+        create_tag(dir.path(), "v1.0.0", "release v1.0.0", false).unwrap();
+        let head = run(dir.path(), &["rev-parse", "HEAD"]).unwrap();
+        assert_eq!(commit_of(dir.path(), "v1.0.0").unwrap(), head);
+    }
+
+    #[test]
+    fn force_move_tag_creates_then_moves() {
+        let dir = init_repo();
+        let first = run(dir.path(), &["rev-parse", "HEAD"]).unwrap();
+        force_move_tag(dir.path(), "v1", &first, "float", false).unwrap();
+        assert_eq!(commit_of(dir.path(), "v1").unwrap(), first);
+
+        git(dir.path(), &["commit", "-q", "--allow-empty", "-m", "c2"]);
+        let second = run(dir.path(), &["rev-parse", "HEAD"]).unwrap();
+        assert_ne!(first, second);
+
+        force_move_tag(dir.path(), "v1", &second, "float", false).unwrap();
+        assert_eq!(commit_of(dir.path(), "v1").unwrap(), second);
+    }
+
+    #[test]
+    fn stage_and_commit_creates_a_commit() {
+        let dir = init_repo();
+        std::fs::write(dir.path().join("f.txt"), "hello").unwrap();
+        stage_and_commit(dir.path(), &["f.txt".to_string()], "add f", false).unwrap();
+        let log = run(dir.path(), &["log", "-1", "--pretty=%s"]).unwrap();
+        assert_eq!(log, "add f");
+    }
+
+    #[test]
+    fn push_tag_and_push_current_branch_reach_the_remote() {
+        let bare = tempfile::tempdir().unwrap();
+        git(bare.path(), &["init", "-q", "--bare"]);
+
+        let dir = init_repo();
+        git(dir.path(), &["config", "push.autoSetupRemote", "true"]);
+        git(
+            dir.path(),
+            &["remote", "add", "origin", bare.path().to_str().unwrap()],
+        );
+
+        push_current_branch(dir.path()).unwrap();
+
+        create_tag(dir.path(), "v1.0.0", "release v1.0.0", false).unwrap();
+        push_tag(dir.path(), "v1.0.0", false).unwrap();
+
+        let remote_tags = run(bare.path(), &["tag", "-l"]).unwrap();
+        assert_eq!(remote_tags, "v1.0.0");
+    }
+}
