@@ -1,0 +1,23 @@
+[package]
+name = "oxr"
+version = "0.1.0"
+edition = "2021"
+description = "Semantic-version bump and git-tag orchestrator for manifest-less repos"
+license = "MIT"
+
+[[bin]]
+name = "oxr"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+semver = "1"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+regex = "1"
+anyhow = "1"
+thiserror = "1"
+serde_json = "1"
+
+[dev-dependencies]
+tempfile = "3"
