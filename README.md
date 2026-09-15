@@ -12,6 +12,26 @@ sort.
 
 ## Install
 
+### With curl
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/oxhive/oxr/main/install.sh | sh
+```
+
+Downloads the prebuilt binary for your platform (`Linux-X64`, `Linux-ARM64`,
+`macOS-ARM64`) from the latest GitHub release and installs it to
+`/usr/local/bin` (override with `OXR_INSTALL_DIR`). Pass a version to pin:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/oxhive/oxr/main/install.sh | sh -s v1.2.3
+```
+
+### With Homebrew
+
+```sh
+brew install oxhive/tap/oxr
+```
+
 ### As a GitHub Action
 
 ```yaml
