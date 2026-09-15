@@ -7,17 +7,31 @@ branding:
 runs:
   using: "composite"
   steps:
-    - name: Add oxr to PATH
+    - name: Install oxr from GitHub release
       shell: bash
       run: |
         set -euo pipefail
-        DIST_DIR="${{ github.action_path }}/dist/${{ runner.os }}-${{ runner.arch }}"
-        BIN="$DIST_DIR/oxr"
 
-        if [ ! -f "$BIN" ]; then
-          echo "::error::oxr has no prebuilt binary for ${{ runner.os }}-${{ runner.arch }}. Supported platforms: Linux-X64, Linux-ARM64, macOS-ARM64. See dist/ in the oxr repo." >&2
-          exit 1
-        fi
+        case "${{ runner.os }}-${{ runner.arch }}" in
+          Linux-X64)   target=x86_64-unknown-linux-gnu ;;
+          Linux-ARM64) target=aarch64-unknown-linux-gnu ;;
+          macOS-ARM64) target=aarch64-apple-darwin ;;
+          *)
+            echo "::error::oxr has no prebuilt binary for ${{ runner.os }}-${{ runner.arch }}. Supported platforms: Linux-X64, Linux-ARM64, macOS-ARM64." >&2
+            exit 1
+            ;;
+        esac
 
-        chmod +x "$BIN"
-        echo "$DIST_DIR" >> "$GITHUB_PATH"
+        repo="${{ github.action_repository }}"
+        ref="${{ github.action_ref }}"
+        asset="oxr-${target}.tar.gz"
+        url="https://github.com/${repo}/releases/download/${ref}/${asset}"
+        dist_dir="${RUNNER_TEMP}/oxr-dist"
+
+        mkdir -p "$dist_dir"
+        echo "Downloading $url"
+        curl -fsSL "$url" -o "$dist_dir/$asset"
+        tar -xzf "$dist_dir/$asset" -C "$dist_dir"
+        chmod +x "$dist_dir/oxr"
+
+        echo "$dist_dir" >> "$GITHUB_PATH"

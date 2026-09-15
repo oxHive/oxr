@@ -1,0 +1,22 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    permissions:
+      id-token: write
+      contents: write
+      pull-requests: read
+      checks: write
+    uses: oxHive/pipelines/.github/workflows/rust-release.yml@v2
+    with:
+      package-name: oxr
+      binary-name: oxr
+      publish-homebrew: true
+      homebrew-install: bin.install "oxr"
+      homebrew-test-command: system "#{bin}/oxr", "--version"
+    secrets: inherit

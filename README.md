@@ -32,11 +32,9 @@ steps:
 than silently miscalculating the version, so a missing `fetch-depth: 0` is
 caught immediately.
 
-Prebuilt binaries are committed directly into this repo under `dist/`
-(see `dist/README.md`) rather than published as GitHub Release assets, so
-pinning the action to a floating tag (`@v1`) always resolves to the matching
-binary with zero extra fetch step. Supported platforms: `Linux-X64`,
-`Linux-ARM64`, `macOS-ARM64`.
+`action.yml` downloads the matching prebuilt binary from the GitHub release
+tagged with the ref it's pinned to (`@v1`, `@v1.2.3`, ...). Supported
+platforms: `Linux-X64`, `Linux-ARM64`, `macOS-ARM64`.
 
 ### Locally
 
