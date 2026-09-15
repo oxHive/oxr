@@ -22,7 +22,7 @@
 # manifest file such as .claude-plugin/plugin.json:
 #
 [[pre-release-replacements]]
-file = ".cargo.toml"
+file = ".Cargo.toml"
 search = "\"version\"= \"[^\"]+\""
 replace = "\"version\"= \"{{version}}\""
 exactly = 1
