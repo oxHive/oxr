@@ -1,0 +1,28 @@
+# oxr configuration.
+#
+# The current version is always read from git tags -- nothing in this file
+# is a version field. Uncomment and edit only the settings you want to
+# change from their defaults.
+
+# sign-commit = false
+# sign-tag = false
+# push = true
+# tag = true
+# tag-name = "v{{version}}"
+# tag-pattern = "^v\\d+\\.\\d+\\.\\d+"
+# pre-release-commit-message = "chore: release v{{version}}"
+
+# [float-tags]
+# major = true
+# minor = false
+# major-tag-name = "v{{major}}"
+# minor-tag-name = "v{{major}}.{{minor}}"
+
+# Keep an embedded version string in sync on every release, e.g. for a
+# manifest file such as .claude-plugin/plugin.json:
+#
+[[pre-release-replacements]]
+file = ".cargo.toml"
+search = "\"version\"= \"[^\"]+\""
+replace = "\"version\"= \"{{version}}\""
+exactly = 1
