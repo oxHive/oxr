@@ -300,6 +300,47 @@ fn release_execute_refuses_a_dirty_working_tree_but_dry_run_still_previews() {
 }
 
 #[test]
+fn release_execute_prints_progress_for_each_step() {
+    let bare = tempfile::tempdir().unwrap();
+    git(bare.path(), &["init", "-q", "--bare"]);
+
+    let dir = init_repo();
+    git(dir.path(), &["config", "push.autoSetupRemote", "true"]);
+    git(
+        dir.path(),
+        &["remote", "add", "origin", bare.path().to_str().unwrap()],
+    );
+
+    std::fs::write(
+        dir.path().join("oxr.toml"),
+        r#"
+[[pre-release-replacements]]
+file = "plugin.json"
+search = "\"version\": \"[^\"]+\""
+replace = "\"version\": \"{{version}}\""
+exactly = 1
+"#,
+    )
+    .unwrap();
+    std::fs::write(dir.path().join("plugin.json"), r#"{"version": "0.0.0"}"#).unwrap();
+    git(dir.path(), &["add", "oxr.toml", "plugin.json"]);
+    git(dir.path(), &["commit", "-q", "-m", "add config"]);
+
+    let o = run(dir.path(), &["release", "patch", "--execute"]);
+    assert!(o.status.success(), "{}", err(&o));
+    let text = out(&o);
+    assert!(text.contains("updated plugin.json"), "{text}");
+    assert!(
+        text.contains(r#"committed "chore: release v0.1.0""#),
+        "{text}"
+    );
+    assert!(text.contains("created tag v0.1.0"), "{text}");
+    assert!(text.contains("pushed commit to origin"), "{text}");
+    assert!(text.contains("pushed tag v0.1.0 to origin"), "{text}");
+    assert!(text.contains("released v0.1.0"), "{text}");
+}
+
+#[test]
 fn release_refuses_a_tag_that_already_exists() {
     // A tag oxr computes can only collide with one already in the repo if
     // that existing tag is invisible to version resolution (a custom

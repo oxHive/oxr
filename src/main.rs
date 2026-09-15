@@ -165,6 +165,7 @@ fn run_release(
     for r in &config.pre_release_replacements {
         replace::apply(repo_root, r, &next)?;
         changed_paths.push(r.file.clone());
+        println!("updated {}", r.file);
     }
 
     let commit_message = template::render(&config.pre_release_commit_message, &next);
@@ -176,18 +177,22 @@ fn run_release(
             &commit_message,
             config.sign_commit,
         )?;
+        println!("committed \"{commit_message}\"");
     }
 
     if config.tag {
         git::create_tag(repo_root, &tag_name, &commit_message, config.sign_tag)?;
+        println!("created tag {tag_name}");
     }
 
     if config.push {
         if !changed_paths.is_empty() {
             git::push_current_branch(repo_root)?;
+            println!("pushed commit to origin");
         }
         if config.tag {
             git::push_tag(repo_root, &tag_name, false)?;
+            println!("pushed tag {tag_name} to origin");
         }
     }
 
