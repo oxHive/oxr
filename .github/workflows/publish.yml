@@ -6,7 +6,21 @@ on:
       - "v*"
 
 jobs:
+  mint-homebrew-token:
+    runs-on: ubuntu-latest
+    outputs:
+      token: ${{ steps.app-token.outputs.token }}
+    steps:
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.HOMEBREW_APP_ID }}
+          private-key: ${{ secrets.HOMEBREW_APP_PRIVATE_KEY }}
+          owner: oxhive
+          repositories: homebrew-tap
+
   release:
+    needs: mint-homebrew-token
     permissions:
       id-token: write
       contents: write
@@ -19,4 +33,10 @@ jobs:
       publish-homebrew: true
       homebrew-install: bin.install "oxr"
       homebrew-test-command: system "#{bin}/oxr", "--version"
-    secrets: inherit
+    secrets:
+      MATRIX_HOMESERVER: ${{ secrets.MATRIX_HOMESERVER }}
+      MATRIX_USER: ${{ secrets.MATRIX_USER }}
+      MATRIX_PASSWORD: ${{ secrets.MATRIX_PASSWORD }}
+      MATRIX_ROOM_ID: ${{ secrets.MATRIX_ROOM_ID }}
+      MATRIX_ALERT_ROOM_ID: ${{ secrets.MATRIX_ALERT_ROOM_ID }}
+      HOMEBREW_TAP_TOKEN: ${{ needs.mint-homebrew-token.outputs.token }}
