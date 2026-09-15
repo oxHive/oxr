@@ -110,10 +110,32 @@ exactly = 1
 "#,
     )
     .unwrap();
+    std::fs::write(dir.path().join("plugin.json"), r#"{"version": "0.0.0"}"#).unwrap();
 
     let o = run(dir.path(), &["release", "patch"]);
     assert!(o.status.success(), "{}", err(&o));
     assert!(out(&o).contains("would update plugin.json"), "{}", out(&o));
+}
+
+#[test]
+fn release_dry_run_catches_a_bad_search_pattern_before_execute() {
+    let dir = init_repo();
+    std::fs::write(
+        dir.path().join("oxr.toml"),
+        r#"
+[[pre-release-replacements]]
+file = "plugin.json"
+search = "\"varsion\": \"[^\"]+\""
+replace = "\"varsion\": \"{{version}}\""
+exactly = 1
+"#,
+    )
+    .unwrap();
+    std::fs::write(dir.path().join("plugin.json"), r#"{"version": "0.0.0"}"#).unwrap();
+
+    let o = run(dir.path(), &["release", "patch"]);
+    assert!(!o.status.success());
+    assert!(err(&o).contains("found 0"), "{}", err(&o));
 }
 
 #[test]

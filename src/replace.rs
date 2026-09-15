@@ -7,11 +7,10 @@ use semver::Version;
 use crate::config::Replacement;
 use crate::template;
 
-/// Applies one `[[pre-release-replacements]]` entry to its file: the
-/// `search` regex must match the file exactly `exactly` times, and
-/// `replace` is rendered for `{{version}}`/etc. before regex backreference
-/// expansion (`$1`, `$2`, ...) is applied.
-pub fn apply(repo_root: &Path, replacement: &Replacement, version: &Version) -> Result<()> {
+/// Reads `replacement.file` and errors unless `search` matches it exactly
+/// `exactly` times. Performs no write, so it's safe to call for a dry-run
+/// preview as well as before `apply`'s real write.
+pub fn check(repo_root: &Path, replacement: &Replacement) -> Result<()> {
     let path = repo_root.join(&replacement.file);
     let contents =
         std::fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
@@ -28,6 +27,21 @@ pub fn apply(repo_root: &Path, replacement: &Replacement, version: &Version) -> 
             match_count
         );
     }
+    Ok(())
+}
+
+/// Applies one `[[pre-release-replacements]]` entry to its file: the
+/// `search` regex must match the file exactly `exactly` times (see
+/// `check`), and `replace` is rendered for `{{version}}`/etc. before regex
+/// backreference expansion (`$1`, `$2`, ...) is applied.
+pub fn apply(repo_root: &Path, replacement: &Replacement, version: &Version) -> Result<()> {
+    check(repo_root, replacement)?;
+
+    let path = repo_root.join(&replacement.file);
+    let contents =
+        std::fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
+    let re = Regex::new(&replacement.search)
+        .with_context(|| format!("invalid search regex for {}", replacement.file))?;
 
     let replace_template = template::render(&replacement.replace, version);
     let updated = re.replace_all(&contents, replace_template.as_str());
@@ -63,6 +77,33 @@ mod tests {
         apply(dir.path(), &r, &version).unwrap();
         let out = std::fs::read_to_string(dir.path().join("plugin.json")).unwrap();
         assert_eq!(out, r#"{"name": "foo", "version": "0.2.0"}"#);
+    }
+
+    #[test]
+    fn check_passes_when_match_count_is_exact() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("plugin.json"),
+            r#"{"name": "foo", "version": "0.1.0"}"#,
+        )
+        .unwrap();
+        let r = replacement(r#""version": "[^"]+""#, r#""version": "{{version}}""#, 1);
+        check(dir.path(), &r).unwrap();
+    }
+
+    #[test]
+    fn check_reports_a_typo_in_search_without_writing_anything() {
+        let dir = tempfile::tempdir().unwrap();
+        let original = r#"{"name": "foo", "version": "0.1.0"}"#;
+        std::fs::write(dir.path().join("plugin.json"), original).unwrap();
+        // "varsion" instead of "version": matches nothing.
+        let r = replacement(r#""varsion": "[^"]+""#, r#""varsion": "{{version}}""#, 1);
+
+        let err = check(dir.path(), &r).unwrap_err();
+        assert!(err.to_string().contains("found 0"), "{err}");
+
+        let untouched = std::fs::read_to_string(dir.path().join("plugin.json")).unwrap();
+        assert_eq!(untouched, original);
     }
 
     #[test]

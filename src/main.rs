@@ -139,8 +139,9 @@ fn run_release(
     if !execute {
         println!("(dry run; pass --execute to apply)");
         for r in &config.pre_release_replacements {
+            replace::check(repo_root, r)?;
             println!(
-                "would update {} (expecting {} match(es) of the search pattern)",
+                "would update {} ({} match(es) of the search pattern, as expected)",
                 r.file, r.exactly
             );
         }
