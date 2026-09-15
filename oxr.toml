@@ -23,6 +23,6 @@
 #
 [[pre-release-replacements]]
 file = "Cargo.toml"
-search = "\"version\"= \"[^\"]+\""
-replace = "\"version\"= \"{{version}}\""
+search = "(?m)^version = \"[^\"]+\""
+replace = "version = \"{{version}}\""
 exactly = 1
