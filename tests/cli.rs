@@ -285,6 +285,21 @@ minor = true
 }
 
 #[test]
+fn release_execute_refuses_a_dirty_working_tree_but_dry_run_still_previews() {
+    let dir = init_repo();
+    std::fs::write(dir.path().join("untracked"), "x").unwrap();
+
+    // Dry run only prints a plan, so an unrelated dirty file (e.g. a config
+    // edit not yet committed) shouldn't block it.
+    let o = run(dir.path(), &["release", "patch"]);
+    assert!(o.status.success(), "{}", err(&o));
+
+    let o = run(dir.path(), &["release", "patch", "--execute"]);
+    assert!(!o.status.success());
+    assert!(err(&o).contains("uncommitted changes"), "{}", err(&o));
+}
+
+#[test]
 fn release_refuses_a_tag_that_already_exists() {
     // A tag oxr computes can only collide with one already in the repo if
     // that existing tag is invisible to version resolution (a custom

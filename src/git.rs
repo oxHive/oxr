@@ -36,6 +36,12 @@ pub fn is_shallow(repo_root: &Path) -> Result<bool> {
     Ok(out == "true")
 }
 
+/// True if the working tree has staged, unstaged, or untracked changes.
+pub fn is_dirty(repo_root: &Path) -> Result<bool> {
+    let out = run(repo_root, &["status", "--porcelain"])?;
+    Ok(!out.is_empty())
+}
+
 pub fn list_tags(repo_root: &Path) -> Result<Vec<String>> {
     let out = run(repo_root, &["tag", "-l"])?;
     Ok(out
@@ -162,6 +168,30 @@ mod tests {
     fn is_shallow_false_for_a_normal_clone() {
         let dir = init_repo();
         assert!(!is_shallow(dir.path()).unwrap());
+    }
+
+    #[test]
+    fn is_dirty_false_for_a_clean_checkout() {
+        let dir = init_repo();
+        assert!(!is_dirty(dir.path()).unwrap());
+    }
+
+    #[test]
+    fn is_dirty_true_with_unstaged_changes() {
+        let dir = init_repo();
+        std::fs::write(dir.path().join("tracked"), "x").unwrap();
+        git(dir.path(), &["add", "tracked"]);
+        git(dir.path(), &["commit", "-q", "-m", "add tracked"]);
+
+        std::fs::write(dir.path().join("tracked"), "y").unwrap();
+        assert!(is_dirty(dir.path()).unwrap());
+    }
+
+    #[test]
+    fn is_dirty_true_with_untracked_files() {
+        let dir = init_repo();
+        std::fs::write(dir.path().join("untracked"), "x").unwrap();
+        assert!(is_dirty(dir.path()).unwrap());
     }
 
     #[test]

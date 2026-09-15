@@ -153,6 +153,14 @@ fn run_release(
         return Ok(());
     }
 
+    if git::is_dirty(repo_root)? {
+        bail!(
+            "'{}' has uncommitted changes; commit or stash them before releasing so the \
+             release tag reflects a known state.",
+            repo_root.display()
+        );
+    }
+
     let mut changed_paths = Vec::new();
     for r in &config.pre_release_replacements {
         replace::apply(repo_root, r, &next)?;
