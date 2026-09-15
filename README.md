@@ -110,6 +110,12 @@ command will actually do.
 | `stable` | Finalize the active pre-release train (`1.5.0-rc.3` → `1.5.0`). Errors if no train is active. |
 | `alpha` / `beta` / `rc` | Start or advance a pre-release train (see below). |
 
+**Commit vs. tag-only.** `oxr release --execute` only creates a
+`pre-release-commit-message` commit (e.g. `chore: release v1.2.3`) when at
+least one `pre-release-replacements` entry actually rewrote a file. With no entries configured, there's nothing to
+commit, so it creates and pushes the tag directly against the current
+`HEAD` — no commit is created.
+
 **Pre-release trains.** A train is active whenever the highest-precedence
 tag overall carries a pre-release component — this is derived purely from
 tag state, nothing is stored. Starting a fresh train defaults to bumping
