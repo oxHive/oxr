@@ -26,3 +26,9 @@ file = "Cargo.toml"
 search = "(?m)^version = \"[^\"]+\""
 replace = "version = \"{{version}}\""
 exactly = 1
+
+[[pre-release-replacements]]
+file = "Cargo.lock"
+search = "name = \"oxr\"\nversion = \"[^\"]+\""
+replace = "name = \"oxr\"\nversion = \"{{version}}\""
+exactly = 1
