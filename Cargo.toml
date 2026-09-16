@@ -1,6 +1,6 @@
 [package]
 name = "oxr"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Semantic-version bump and git-tag orchestrator for manifest-less repos"
 license = "MIT"
